@@ -12,10 +12,4 @@ Thanks for helping improve `peak-bridge`.
 
 ## Checks
 
-Run:
-
-```bash
-npm run lint:lua
-```
-
-This parses all Lua files with `luaparse` to catch syntax errors.
+Before opening a pull request, load the resource in a local FiveM server and confirm there are no client or server console errors.

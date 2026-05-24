@@ -2,7 +2,7 @@
 
 `peak-bridge` is the shared integration layer for future Peak resources. It centralizes framework, inventory, SQL, callback, money, notification, progress, text UI, and appearance bridge logic so new scripts do not copy the same code.
 
-Existing Peak resources do not depend on this yet.
+`peak-barbers` now depends on this bridge, and new Peak resources should use it instead of copying local framework bridge logic.
 
 ## Load Order
 
