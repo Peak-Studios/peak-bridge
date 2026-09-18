@@ -1,9 +1,9 @@
 PeakBridgeConfig = PeakBridgeConfig or {}
 
--- Framework: 'auto', 'qbox', 'qbx', 'qbcore', 'esx', 'ox', 'vrp', 'standalone'
+-- Framework: 'auto', 'fw-core', 'qbox', 'qbx', 'qbcore', 'esx', 'ox', 'vrp', 'standalone'
 PeakBridgeConfig.Framework = 'auto'
 
--- Inventory: 'auto', 'ox_inventory', 'qb-inventory', 'qb_inventory', 'ps-inventory',
+-- Inventory: 'auto', 'fw-inventory', 'ox_inventory', 'qb-inventory', 'qb_inventory', 'ps-inventory',
 -- 'qs-inventory', 'qs_inventory', 'codem-inventory', 'gfx-inventory', 'esx_inventory', 'none'
 PeakBridgeConfig.Inventory = 'auto'
 
@@ -11,8 +11,8 @@ PeakBridgeConfig.Inventory = 'auto'
 PeakBridgeConfig.SQL = 'auto'
 
 -- Client systems.
-PeakBridgeConfig.Notify = 'auto' -- 'auto', 'ox_lib', 'qb-core', 'esx', 'native'
-PeakBridgeConfig.Target = 'auto' -- 'auto', 'ox_target', 'qb-target', 'none'
+PeakBridgeConfig.Notify = 'auto' -- 'auto', 'fw-core', 'ox_lib', 'qb-core', 'esx', 'native'
+PeakBridgeConfig.Target = 'auto' -- 'auto', 'fw-ui', 'ox_target', 'qb-target', 'none'
 PeakBridgeConfig.Progress = 'auto' -- 'auto', 'ox_lib', 'progressbar', 'wait'
 PeakBridgeConfig.Appearance = 'auto' -- 'auto', 'illenium-appearance', 'fivem-appearance', 'qb-clothing', 'rcore_clothing', 'rcore_clothes', 'skinchanger', 'none'
 

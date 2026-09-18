@@ -18,6 +18,7 @@ local Shared = PeakBridge.Shared
 local function detectFramework()
     local configured = Shared.NormalizeName(Config.Framework)
     if configured and configured ~= 'auto' then return configured end
+    if Shared.IsStarted('fw-core') then return 'fw-core' end
     if Shared.IsStarted('qbx_core') then return 'qbox' end
     if Shared.IsStarted('qb-core') then return 'qbcore' end
     if Shared.IsStarted('es_extended') then return 'esx' end
@@ -54,7 +55,10 @@ local function initializeFramework()
     local fw = detectFramework()
     PeakBridge.Client.FrameworkName = fw
 
-    if fw == 'qbcore' and Shared.IsStarted('qb-core') then
+    if fw == 'fw-core' and Shared.IsStarted('fw-core') then
+        PeakBridge.Client.FrameworkObject = exports['fw-core']:GetCoreObject()
+        PeakBridge.Client.FrameworkShared = PeakBridge.Client.FrameworkObject and PeakBridge.Client.FrameworkObject.Shared
+    elseif fw == 'qbcore' and Shared.IsStarted('qb-core') then
         PeakBridge.Client.FrameworkObject = exports['qb-core']:GetCoreObject()
         PeakBridge.Client.FrameworkShared = PeakBridge.Client.FrameworkObject.Shared
     elseif fw == 'qbox' and Shared.IsStarted('qbx_core') then
@@ -67,6 +71,7 @@ end
 local function detectNotify()
     local configured = Shared.NormalizeName(Config.Notify)
     if configured and configured ~= 'auto' then return configured end
+    if Shared.IsStarted('fw-core') then return 'fw-core' end
     if Shared.IsStarted('ox_lib') then return 'ox_lib' end
     if Shared.IsStarted('qb-core') then return 'qb-core' end
     if Shared.IsStarted('es_extended') then return 'esx' end
@@ -76,6 +81,7 @@ end
 local function detectTarget()
     local configured = Shared.NormalizeName(Config.Target)
     if configured and configured ~= 'auto' then return configured ~= 'none' and configured or nil end
+    if Shared.IsStarted('fw-ui') then return 'fw-ui' end
     if Shared.IsStarted('ox_target') then return 'ox_target' end
     if Shared.IsStarted('qb-target') then return 'qb-target' end
     return nil
@@ -126,7 +132,7 @@ end)
 function PeakBridge.Client.GetPlayerData()
     local fw = PeakBridge.Client.FrameworkName
     local obj = PeakBridge.Client.FrameworkObject
-    if (fw == 'qbcore' or fw == 'qbox') and obj and obj.Functions and obj.Functions.GetPlayerData then
+    if (fw == 'fw-core' or fw == 'qbcore' or fw == 'qbox') and obj and obj.Functions and obj.Functions.GetPlayerData then
         return obj.Functions.GetPlayerData()
     elseif fw == 'esx' and obj and obj.GetPlayerData then
         return obj.GetPlayerData()
@@ -168,7 +174,7 @@ function PeakBridge.Client.Notify(text, notifyType, duration, title)
     if system == 'ox_lib' and lib and lib.notify then
         local oxType = notifyType == 'info' and 'inform' or notifyType
         lib.notify({ title = title or 'Notification', description = text, type = oxType, duration = duration })
-    elseif system == 'qb-core' and PeakBridge.Client.FrameworkObject and PeakBridge.Client.FrameworkObject.Functions then
+    elseif (system == 'fw-core' or system == 'qb-core') and PeakBridge.Client.FrameworkObject and PeakBridge.Client.FrameworkObject.Functions then
         local qbType = notifyType == 'info' and 'primary' or (notifyType == 'warning' and 'error' or notifyType)
         PeakBridge.Client.FrameworkObject.Functions.Notify(text, qbType, duration)
     elseif system == 'esx' and PeakBridge.Client.FrameworkObject and PeakBridge.Client.FrameworkObject.ShowNotification then

@@ -16,6 +16,7 @@ local Shared = PeakBridge.Shared
 local function detectFramework()
     local configured = Shared.NormalizeName(Config.Framework)
     if configured and configured ~= 'auto' then return configured end
+    if Shared.IsStarted('fw-core') then return 'fw-core' end
     if Shared.IsStarted('qbx_core') then return 'qbox' end
     if Shared.IsStarted('qb-core') then return 'qbcore' end
     if Shared.IsStarted('es_extended') then return 'esx' end
@@ -65,7 +66,10 @@ local function initializeFramework()
     local fw = detectFramework()
     PeakBridge.Server.FrameworkName = fw
 
-    if fw == 'qbcore' and Shared.IsStarted('qb-core') then
+    if fw == 'fw-core' and Shared.IsStarted('fw-core') then
+        PeakBridge.Server.FrameworkObject = exports['fw-core']:GetCoreObject()
+        PeakBridge.Server.FrameworkShared = PeakBridge.Server.FrameworkObject and PeakBridge.Server.FrameworkObject.Shared
+    elseif fw == 'qbcore' and Shared.IsStarted('qb-core') then
         PeakBridge.Server.FrameworkObject = exports['qb-core']:GetCoreObject()
         PeakBridge.Server.FrameworkShared = PeakBridge.Server.FrameworkObject.Shared
     elseif fw == 'qbox' and Shared.IsStarted('qbx_core') then
@@ -83,6 +87,8 @@ local function detectInventory()
     if configured and configured ~= 'auto' then
         return configured ~= 'none' and configured or nil
     end
+
+    if Shared.IsStarted('fw-inventory') then return 'fw-inventory' end
 
     local systems = {
         'ox_inventory',
@@ -113,7 +119,7 @@ end
 local function getFrameworkPlayer(source)
     local fw = PeakBridge.Server.FrameworkName
     local obj = PeakBridge.Server.FrameworkObject
-    if fw == 'qbcore' or fw == 'qbox' then
+    if fw == 'fw-core' or fw == 'qbcore' or fw == 'qbox' then
         return obj and obj.Functions and obj.Functions.GetPlayer and obj.Functions.GetPlayer(source) or nil
     elseif fw == 'esx' then
         return obj and obj.GetPlayerFromId and obj.GetPlayerFromId(source) or nil
@@ -133,7 +139,7 @@ end
 function PeakBridge.Server.GetIdentifier(source)
     local fw = PeakBridge.Server.FrameworkName
     local player = getFrameworkPlayer(source)
-    if (fw == 'qbcore' or fw == 'qbox') and player and player.PlayerData then
+    if (fw == 'fw-core' or fw == 'qbcore' or fw == 'qbox') and player and player.PlayerData then
         return player.PlayerData.citizenid or player.PlayerData.license
     elseif fw == 'esx' and player then
         if player.getIdentifier then return player.getIdentifier() end
@@ -147,7 +153,7 @@ end
 function PeakBridge.Server.GetPlayerName(source)
     local fw = PeakBridge.Server.FrameworkName
     local player = getFrameworkPlayer(source)
-    if (fw == 'qbcore' or fw == 'qbox') and player and player.PlayerData then
+    if (fw == 'fw-core' or fw == 'qbcore' or fw == 'qbox') and player and player.PlayerData then
         local charinfo = player.PlayerData.charinfo or {}
         local name = ((charinfo.firstname or '') .. ' ' .. (charinfo.lastname or '')):gsub('^%s*(.-)%s*$', '%1')
         if name ~= '' then return name end
@@ -171,7 +177,7 @@ function PeakBridge.Server.AddMoney(source, amount, account, reason)
 
     local fw = PeakBridge.Server.FrameworkName
     local player = getFrameworkPlayer(source)
-    if (fw == 'qbcore' or fw == 'qbox') and player and player.Functions and player.Functions.AddMoney then
+    if (fw == 'fw-core' or fw == 'qbcore' or fw == 'qbox') and player and player.Functions and player.Functions.AddMoney then
         return player.Functions.AddMoney(account, amount, reason) == true
     elseif fw == 'esx' and player then
         if account == 'money' and player.addMoney then
@@ -197,7 +203,7 @@ function PeakBridge.Server.RemoveMoney(source, amount, account, reason)
 
     local fw = PeakBridge.Server.FrameworkName
     local player = getFrameworkPlayer(source)
-    if (fw == 'qbcore' or fw == 'qbox') and player and player.Functions and player.Functions.RemoveMoney then
+    if (fw == 'fw-core' or fw == 'qbcore' or fw == 'qbox') and player and player.Functions and player.Functions.RemoveMoney then
         return player.Functions.RemoveMoney(account, amount, reason) == true
     elseif fw == 'esx' and player then
         if account == 'money' and player.removeMoney then
@@ -219,7 +225,7 @@ function PeakBridge.Server.GetMoney(source, account)
     account = normalizeAccount(account)
     local fw = PeakBridge.Server.FrameworkName
     local player = getFrameworkPlayer(source)
-    if (fw == 'qbcore' or fw == 'qbox') and player and player.PlayerData and player.PlayerData.money then
+    if (fw == 'fw-core' or fw == 'qbcore' or fw == 'qbox') and player and player.PlayerData and player.PlayerData.money then
         return player.PlayerData.money[account] or 0
     elseif fw == 'esx' and player then
         if account == 'money' and player.getMoney then return player.getMoney() or 0 end
@@ -270,7 +276,7 @@ function PeakBridge.Server.AddItem(source, item, count, metadata, slot)
 
     local fw = PeakBridge.Server.FrameworkName
     local player = getFrameworkPlayer(source)
-    if (fw == 'qbcore' or fw == 'qbox') then
+    if (fw == 'fw-core' or fw == 'qbcore' or fw == 'qbox') then
         return qbPlayerInventoryCall(source, 'AddItem', item, count, slot, metadata) == true
     elseif fw == 'esx' and player and player.addInventoryItem then
         player.addInventoryItem(item, count)
@@ -287,12 +293,12 @@ function PeakBridge.Server.RemoveItem(source, item, count, slot, metadata)
     if inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
         local ok, res = pcall(function() return exports.ox_inventory:RemoveItem(source, item, count, metadata, slot) end)
         return ok and res == true
-    elseif (inv == 'qb-inventory' or inv == 'ps-inventory') then
+    elseif (inv == 'fw-inventory' or inv == 'qb-inventory' or inv == 'ps-inventory') then
         local res = qbPlayerInventoryCall(source, 'RemoveItem', item, count, slot, metadata)
         if res ~= nil then return res end
         if Shared.IsStarted(inv) then
             local ok, out = pcall(function() return exports[inv]:RemoveItem(source, item, count, slot) end)
-            return ok and out == true
+            if ok and out == true then return true end
         end
     elseif inv == 'qs-inventory' and Shared.IsStarted('qs-inventory') then
         local ok, res = pcall(function() return exports['qs-inventory']:RemoveItem(source, item, count, slot) end)
@@ -307,7 +313,7 @@ function PeakBridge.Server.RemoveItem(source, item, count, slot, metadata)
 
     local fw = PeakBridge.Server.FrameworkName
     local player = getFrameworkPlayer(source)
-    if (fw == 'qbcore' or fw == 'qbox') then
+    if (fw == 'fw-core' or fw == 'qbcore' or fw == 'qbox') then
         return qbPlayerInventoryCall(source, 'RemoveItem', item, count, slot, metadata) == true
     elseif fw == 'esx' and player and player.removeInventoryItem then
         player.removeInventoryItem(item, count)
@@ -329,7 +335,7 @@ function PeakBridge.Server.GetItemCount(source, item)
 
     local fw = PeakBridge.Server.FrameworkName
     local player = getFrameworkPlayer(source)
-    if (fw == 'qbcore' or fw == 'qbox') and player and player.Functions and player.Functions.GetItemByName then
+    if (fw == 'fw-core' or fw == 'qbcore' or fw == 'qbox') and player and player.Functions and player.Functions.GetItemByName then
         local itemData = player.Functions.GetItemByName(item)
         return itemData and tonumber(itemData.amount or itemData.count) or 0
     elseif fw == 'esx' and player and player.getInventoryItem then
@@ -340,7 +346,14 @@ function PeakBridge.Server.GetItemCount(source, item)
 end
 
 function PeakBridge.Server.HasItem(source, item, count)
-    return PeakBridge.Server.GetItemCount(source, item) >= (tonumber(count) or 1)
+    count = tonumber(count) or 1
+    if (PeakBridge.Server.FrameworkName == 'fw-core') then
+        local player = getFrameworkPlayer(source)
+        if player and player.Functions and player.Functions.HasEnoughOfItem then
+            return player.Functions.HasEnoughOfItem(item, count) == true
+        end
+    end
+    return PeakBridge.Server.GetItemCount(source, item) >= count
 end
 
 function PeakBridge.Server.RegisterUsableItem(item, cb)
