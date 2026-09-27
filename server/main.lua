@@ -259,10 +259,13 @@ function PeakBridge.Server.AddItem(source, item, count, metadata, slot)
     if not item or count <= 0 then return false end
 
     local inv = currentInventory()
-    if inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
+    if inv == 'peak-qb-inventory' and Shared.IsStarted(inv) then
+        local ok, result = pcall(function() return exports[inv]:AddItem(source, item, count, slot, metadata) end)
+        return ok and result == true
+    elseif inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
         local ok, res = pcall(function() return exports.ox_inventory:AddItem(source, item, count, metadata, slot) end)
         return ok and res == true
-    elseif (inv == 'peak-qb-inventory' or inv == 'qb-inventory' or inv == 'ps-inventory') then
+    elseif (inv == 'qb-inventory' or inv == 'ps-inventory') then
         local res = qbPlayerInventoryCall(source, 'AddItem', item, count, slot, metadata)
         if res ~= nil then return res end
         if Shared.IsStarted(inv) then
@@ -296,10 +299,13 @@ function PeakBridge.Server.RemoveItem(source, item, count, slot, metadata)
     if not item or count <= 0 then return false end
 
     local inv = currentInventory()
-    if inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
+    if inv == 'peak-qb-inventory' and Shared.IsStarted(inv) then
+        local ok, result = pcall(function() return exports[inv]:RemoveItem(source, item, count, slot) end)
+        return ok and result == true
+    elseif inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
         local ok, res = pcall(function() return exports.ox_inventory:RemoveItem(source, item, count, metadata, slot) end)
         return ok and res == true
-    elseif (inv == 'peak-qb-inventory' or inv == 'fw-inventory' or inv == 'qb-inventory' or inv == 'ps-inventory') then
+    elseif (inv == 'fw-inventory' or inv == 'qb-inventory' or inv == 'ps-inventory') then
         local res = qbPlayerInventoryCall(source, 'RemoveItem', item, count, slot, metadata)
         if res ~= nil then return res end
         if Shared.IsStarted(inv) then
