@@ -91,6 +91,7 @@ local function detectInventory()
     if Shared.IsStarted('fw-inventory') then return 'fw-inventory' end
 
     local systems = {
+        'peak-qb-inventory',
         'ox_inventory',
         'qb-inventory',
         'ps-inventory',
@@ -103,6 +104,11 @@ local function detectInventory()
     end
     if PeakBridge.Server.FrameworkName == 'esx' then return 'esx_inventory' end
     return nil
+end
+
+local function currentInventory()
+    PeakBridge.Server.InventoryName = detectInventory()
+    return PeakBridge.Server.InventoryName
 end
 
 local function detectSQL()
@@ -252,11 +258,11 @@ function PeakBridge.Server.AddItem(source, item, count, metadata, slot)
     count = tonumber(count) or 1
     if not item or count <= 0 then return false end
 
-    local inv = PeakBridge.Server.InventoryName
+    local inv = currentInventory()
     if inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
         local ok, res = pcall(function() return exports.ox_inventory:AddItem(source, item, count, metadata, slot) end)
         return ok and res == true
-    elseif (inv == 'qb-inventory' or inv == 'ps-inventory') then
+    elseif (inv == 'peak-qb-inventory' or inv == 'qb-inventory' or inv == 'ps-inventory') then
         local res = qbPlayerInventoryCall(source, 'AddItem', item, count, slot, metadata)
         if res ~= nil then return res end
         if Shared.IsStarted(inv) then
@@ -289,11 +295,11 @@ function PeakBridge.Server.RemoveItem(source, item, count, slot, metadata)
     count = tonumber(count) or 1
     if not item or count <= 0 then return false end
 
-    local inv = PeakBridge.Server.InventoryName
+    local inv = currentInventory()
     if inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
         local ok, res = pcall(function() return exports.ox_inventory:RemoveItem(source, item, count, metadata, slot) end)
         return ok and res == true
-    elseif (inv == 'fw-inventory' or inv == 'qb-inventory' or inv == 'ps-inventory') then
+    elseif (inv == 'peak-qb-inventory' or inv == 'fw-inventory' or inv == 'qb-inventory' or inv == 'ps-inventory') then
         local res = qbPlayerInventoryCall(source, 'RemoveItem', item, count, slot, metadata)
         if res ~= nil then return res end
         if Shared.IsStarted(inv) then
@@ -324,8 +330,11 @@ end
 
 function PeakBridge.Server.GetItemCount(source, item)
     if not item then return 0 end
-    local inv = PeakBridge.Server.InventoryName
-    if inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
+    local inv = currentInventory()
+    if inv == 'peak-qb-inventory' and Shared.IsStarted(inv) then
+        local ok, count = pcall(function() return exports[inv]:GetItemCount(source, item) end)
+        if ok then return tonumber(count) or 0 end
+    elseif inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
         local ok, count = pcall(function() return exports.ox_inventory:GetItemCount(source, item) end)
         if ok then return tonumber(count) or 0 end
     elseif inv == 'qs-inventory' and Shared.IsStarted('qs-inventory') then
@@ -452,7 +461,7 @@ end
 exports('IsReady', function() return PeakBridge.Server.Ready end)
 exports('GetFrameworkName', function() return PeakBridge.Server.FrameworkName end)
 exports('GetFramework', function() return PeakBridge.Server.FrameworkObject end)
-exports('GetInventoryName', function() return PeakBridge.Server.InventoryName end)
+exports('GetInventoryName', currentInventory)
 exports('GetSQLDriver', function() return PeakBridge.Server.SQLDriver end)
 exports('GetPlayer', function(...) return PeakBridge.Server.GetPlayer(...) end)
 exports('GetIdentifier', function(...) return PeakBridge.Server.GetIdentifier(...) end)
@@ -472,7 +481,7 @@ exports('ExecuteSql', function(...) return PeakBridge.Server.ExecuteSql(...) end
 CreateThread(function()
     Wait(150)
     initializeFramework()
-    PeakBridge.Server.InventoryName = detectInventory()
+    PeakBridge.Server.InventoryName = currentInventory()
     PeakBridge.Server.SQLDriver = detectSQL()
     PeakBridge.Server.Ready = true
     Shared.Info(('Server ready. Framework: ^5%s^0 | Inventory: ^5%s^0 | SQL: ^5%s^0'):format(
