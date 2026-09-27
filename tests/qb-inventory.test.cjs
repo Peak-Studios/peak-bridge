@@ -13,17 +13,16 @@ test('QBCore bridge routes item operations through the detected qb-inventory exp
           local items = { phone = { 2, 2 }, simcard = {} }
           local failCountExport = false
           local rejectAdd = false
-          local exportMissingAdd = false
-          local exportMissingRemove = false
+          local inventoryStarted = true
           local partialThenThrow = false
+          local removeThenThrow = false
           local inventory = {}
           function inventory:AddItem(source, item, count, slot, metadata)
             calls.add = calls.add + 1
             calls.addArgs = { source, item, count, slot, metadata }
-            if exportMissingAdd then error('No such export AddItem in resource qb-inventory') end
             if partialThenThrow then
               calls.partialMutations = calls.partialMutations + 1
-              error('mock inventory failure after mutation')
+              error('No such export AddItem in resource qb-inventory')
             end
             if rejectAdd then return false end
             return true
@@ -31,7 +30,10 @@ test('QBCore bridge routes item operations through the detected qb-inventory exp
           function inventory:RemoveItem(source, item, count, slot)
             calls.remove = calls.remove + 1
             calls.removeArgs = { source, item, count, slot }
-            if exportMissingRemove then error('No such export RemoveItem in resource qb-inventory') end
+            if removeThenThrow then
+              calls.partialMutations = calls.partialMutations + 1
+              error('No such export RemoveItem in resource qb-inventory')
+            end
             return true
           end
           function inventory:GetItemCount(source, item)
@@ -52,7 +54,10 @@ test('QBCore bridge routes item operations through the detected qb-inventory exp
             Config = { Framework = 'qbcore', Inventory = 'qb-inventory', SQL = 'none' },
             Shared = {
               NormalizeName = function(name) return name end,
-              IsStarted = function(name) return name == 'qb-inventory' or name == 'qb-core' end,
+              IsStarted = function(name)
+                if name == 'qb-inventory' then return inventoryStarted end
+                return name == 'qb-core'
+              end,
               Info = function() end,
               Warn = function() end,
             },
@@ -99,30 +104,34 @@ test('QBCore bridge routes item operations through the detected qb-inventory exp
             'framework item lookup should remain a fallback when inventory count export errors')
           assert(calls.nativeCount == 1, 'framework count fallback was not used after export error')
 
-          exportMissingAdd = true
+          inventoryStarted = false
           assert(PeakBridge.Server.AddItem(7, 'simcard', 1, {}, nil),
-            'QB player method should be used when the inventory export is demonstrably absent')
-          assert(calls.nativeAdd == 1, 'missing AddItem export did not use QB player fallback')
-          exportMissingAdd = false
-
-          exportMissingRemove = true
+            'QB player method should be used when the inventory resource is not started')
+          assert(calls.nativeAdd == 1, 'stopped inventory did not use QB player fallback')
           assert(PeakBridge.Server.RemoveItem(7, 'simcard', 1, nil),
-            'QB player method should be used when RemoveItem export is demonstrably absent')
-          assert(calls.nativeRemove == 1, 'missing RemoveItem export did not use QB player fallback')
-          exportMissingRemove = false
+            'QB player method should be used when the inventory resource is not started')
+          assert(calls.nativeRemove == 1, 'stopped inventory did not use QB player fallback')
+          inventoryStarted = true
 
           rejectAdd = true
           assert(PeakBridge.Server.AddItem(7, 'simcard', 1, {}, nil) == false,
             'inventory rejection must not be reported as success')
-          assert(calls.add == 3 and calls.nativeAdd == 1,
+          assert(calls.add == 2 and calls.nativeAdd == 1,
             'explicit inventory rejection must not fall through to framework mutation')
           rejectAdd = false
 
           partialThenThrow = true
           assert(PeakBridge.Server.AddItem(7, 'simcard', 1, {}, nil) == false,
-            'inventory error after an ambiguous partial mutation must fail closed')
+            'inventory error after mutation must fail closed even if it resembles a missing export')
           assert(calls.partialMutations == 1 and calls.nativeAdd == 1,
-            'ambiguous export error fell through and risked a duplicate item')
+            'AddItem exception matching a missing-export message fell through and risked a duplicate')
+          partialThenThrow = false
+
+          removeThenThrow = true
+          assert(PeakBridge.Server.RemoveItem(7, 'simcard', 1, nil) == false,
+            'RemoveItem error after mutation must fail closed even if it resembles a missing export')
+          assert(calls.partialMutations == 2 and calls.nativeRemove == 1,
+            'RemoveItem exception matching a missing-export message fell through to QB mutation')
         `);
     } finally {
         lua.global.close();

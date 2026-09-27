@@ -262,9 +262,6 @@ local function callQBInventoryExport(resource, method, ...)
     end)
     if ok then return result, 'called' end
 
-    local message = tostring(result):lower()
-    local missingExport = message:find('no such export ' .. method:lower(), 1, true) ~= nil
-    if missingExport then return nil, 'missing' end
     Shared.Warn(('Inventory export %s:%s failed: %s'):format(resource, method, tostring(result)))
     return nil, 'error'
 end
