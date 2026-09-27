@@ -254,6 +254,21 @@ local function qbPlayerInventoryCall(source, method, item, count, slot, metadata
     return nil
 end
 
+local function callQBInventoryExport(resource, method, ...)
+    if not Shared.IsStarted(resource) then return nil, 'missing' end
+    local arguments = table.pack(...)
+    local ok, result = pcall(function()
+        return exports[resource][method](exports[resource], table.unpack(arguments, 1, arguments.n))
+    end)
+    if ok then return result, 'called' end
+
+    local message = tostring(result):lower()
+    local missingExport = message:find('no such export ' .. method:lower(), 1, true) ~= nil
+    if missingExport then return nil, 'missing' end
+    Shared.Warn(('Inventory export %s:%s failed: %s'):format(resource, method, tostring(result)))
+    return nil, 'error'
+end
+
 function PeakBridge.Server.AddItem(source, item, count, metadata, slot)
     count = tonumber(count) or 1
     if not item or count <= 0 then return false end
@@ -265,7 +280,20 @@ function PeakBridge.Server.AddItem(source, item, count, metadata, slot)
     elseif inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
         local ok, res = pcall(function() return exports.ox_inventory:AddItem(source, item, count, metadata, slot) end)
         return ok and res == true
-    elseif (inv == 'qb-inventory' or inv == 'ps-inventory') then
+    elseif inv == 'qb-inventory' then
+        local out, status = callQBInventoryExport(inv, 'AddItem', source, item, count, slot, metadata)
+        if status == 'called' then return out == true end
+        if status == 'error' then return false end
+        local res = qbPlayerInventoryCall(source, 'AddItem', item, count, slot, metadata)
+        if res ~= nil then return res end
+    elseif inv == 'ps-inventory' then
+        local res = qbPlayerInventoryCall(source, 'AddItem', item, count, slot, metadata)
+        if res ~= nil then return res end
+        if Shared.IsStarted(inv) then
+            local ok, out = pcall(function() return exports[inv]:AddItem(source, item, count, slot, metadata) end)
+            return ok and out == true
+        end
+    elseif inv == 'fw-inventory' then
         local res = qbPlayerInventoryCall(source, 'AddItem', item, count, slot, metadata)
         if res ~= nil then return res end
         if Shared.IsStarted(inv) then
@@ -305,7 +333,20 @@ function PeakBridge.Server.RemoveItem(source, item, count, slot, metadata)
     elseif inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
         local ok, res = pcall(function() return exports.ox_inventory:RemoveItem(source, item, count, metadata, slot) end)
         return ok and res == true
-    elseif (inv == 'fw-inventory' or inv == 'qb-inventory' or inv == 'ps-inventory') then
+    elseif inv == 'qb-inventory' then
+        local out, status = callQBInventoryExport(inv, 'RemoveItem', source, item, count, slot)
+        if status == 'called' then return out == true end
+        if status == 'error' then return false end
+        local res = qbPlayerInventoryCall(source, 'RemoveItem', item, count, slot, metadata)
+        if res ~= nil then return res end
+    elseif inv == 'ps-inventory' then
+        local res = qbPlayerInventoryCall(source, 'RemoveItem', item, count, slot, metadata)
+        if res ~= nil then return res end
+        if Shared.IsStarted(inv) then
+            local ok, out = pcall(function() return exports[inv]:RemoveItem(source, item, count, slot) end)
+            if ok and out == true then return true end
+        end
+    elseif inv == 'fw-inventory' then
         local res = qbPlayerInventoryCall(source, 'RemoveItem', item, count, slot, metadata)
         if res ~= nil then return res end
         if Shared.IsStarted(inv) then
@@ -343,6 +384,9 @@ function PeakBridge.Server.GetItemCount(source, item)
     elseif inv == 'ox_inventory' and Shared.IsStarted('ox_inventory') then
         local ok, count = pcall(function() return exports.ox_inventory:GetItemCount(source, item) end)
         if ok then return tonumber(count) or 0 end
+    elseif inv == 'qb-inventory' and Shared.IsStarted(inv) then
+        local ok, count = pcall(function() return exports[inv]:GetItemCount(source, item) end)
+        if ok and tonumber(count) then return tonumber(count) end
     elseif inv == 'qs-inventory' and Shared.IsStarted('qs-inventory') then
         local ok, count = pcall(function() return exports['qs-inventory']:GetItemTotalAmount(source, item) end)
         if ok then return tonumber(count) or 0 end
