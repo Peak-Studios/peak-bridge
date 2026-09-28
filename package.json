@@ -1,0 +1,10 @@
+{
+  "name": "peak-bridge",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.cjs"
+  },
+  "devDependencies": {
+    "wasmoon": "1.16.0"
+  }
+}

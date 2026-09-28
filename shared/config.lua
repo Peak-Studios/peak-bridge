@@ -3,7 +3,7 @@ PeakBridgeConfig = PeakBridgeConfig or {}
 -- Framework: 'auto', 'fw-core', 'qbox', 'qbx', 'qbcore', 'esx', 'ox', 'vrp', 'standalone'
 PeakBridgeConfig.Framework = 'auto'
 
--- Inventory: 'auto', 'fw-inventory', 'ox_inventory', 'qb-inventory', 'qb_inventory', 'ps-inventory',
+-- Inventory: 'auto', 'peak-qb-inventory', 'fw-inventory', 'ox_inventory', 'qb-inventory', 'qb_inventory', 'ps-inventory',
 -- 'qs-inventory', 'qs_inventory', 'codem-inventory', 'gfx-inventory', 'esx_inventory', 'none'
 PeakBridgeConfig.Inventory = 'auto'
 
